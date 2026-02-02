@@ -26972,16 +26972,6 @@ const VoronoiTreemapHelpers = {
 
 
 /**
- * Escape a string for use in CSS selectors
- * @param {string} str - String to escape
- * @returns {string} Escaped string safe for CSS selectors
- */
-function escapeCSSSelector(str) {
-  if (!str) return '';
-  return str.replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~\n\r\t]/g, '\\$&');
-}
-
-/**
  * VoronoiTreemap - Main visualization class
  *
  * @example
@@ -27076,6 +27066,7 @@ class VoronoiTreemap {
     this._computeLayout();
     this._drawCells();
     this._drawLabels();
+    this._buildLabelCache();
     this._applyPostEffects();
 
     return this.svg.node();
@@ -27404,36 +27395,37 @@ class VoronoiTreemap {
         clickFunc(clicked ? "" : { ...d.data, event: e, d, clickArea: area });
       })
       .on("mouseenter", function (e, d) {
-        const label1 = self.bigLabelsGroup.select(
-          `[data-bigCluster="${escapeCSSSelector(d.data.data.bigClusterLabel)}"]`
-        );
-        label1.attr("opacity", 1);
+        // Use cached label lookups instead of DOM queries (O(1) vs O(n))
+        const bigClusterKey = d.data.data.bigClusterLabel;
+        const clusterKey = d.data.data.clusterLabel;
 
-        const label = self.labelsGroup.select(
-          `[data-cluster="${escapeCSSSelector(d.data.data.clusterLabel)}"]`
-        );
-        label.attr("opacity", 1);
+        const label1 = self._bigClusterLabelCache?.get(bigClusterKey);
+        if (label1) label1.attr("opacity", 1);
 
-        let area = self.voronoiGroup.select(`.area-${d.id}`);
-        area.classed("highlite", true);
+        const label = self._clusterLabelCache?.get(clusterKey);
+        if (label) label.attr("opacity", 1);
+
+        // Use d3.select(this) instead of DOM query
+        d3.select(this).classed("highlite", true);
       })
       .on("mouseleave", function (e, d) {
-        const label1 = self.bigLabelsGroup.select(
-          `[data-bigCluster="${escapeCSSSelector(d.data.data.bigClusterLabel)}"]`
-        );
-        label1.attr("opacity", (d) =>
-          label1.attr("data-ratio") >= self.params.ratioLimit ? 1 : 0
-        );
+        // Use cached label lookups instead of DOM queries (O(1) vs O(n))
+        const bigClusterKey = d.data.data.bigClusterLabel;
+        const clusterKey = d.data.data.clusterLabel;
+        const ratioLimit = self.params.ratioLimit;
 
-        const label = self.labelsGroup.select(
-          `[data-cluster="${escapeCSSSelector(d.data.data.clusterLabel)}"]`
-        );
-        label.attr("opacity", (d) =>
-          label.attr("data-ratio") >= self.params.ratioLimit ? 1 : 0
-        );
+        const label1 = self._bigClusterLabelCache?.get(bigClusterKey);
+        if (label1) {
+          label1.attr("opacity", label1._cachedRatio >= ratioLimit ? 1 : 0);
+        }
 
-        let area = self.voronoiGroup.select(`.area-${d.id}`);
-        area.classed("highlite", false);
+        const label = self._clusterLabelCache?.get(clusterKey);
+        if (label) {
+          label.attr("opacity", label._cachedRatio >= ratioLimit ? 1 : 0);
+        }
+
+        // Use d3.select(this) instead of DOM query
+        d3.select(this).classed("highlite", false);
       });
   }
 
@@ -27443,6 +27435,32 @@ class VoronoiTreemap {
     this._drawPercentLabels();
     this._drawSectorLabels();
     this._drawPopLabels();
+  }
+
+  _buildLabelCache() {
+    // Build lookup maps for fast label access during hover events
+    this._bigClusterLabelCache = new Map();
+    this._clusterLabelCache = new Map();
+
+    // Cache bigCluster labels with their ratio values
+    this.bigLabelsGroup.selectAll("[data-bigCluster]").nodes().forEach((node) => {
+      const key = node.getAttribute("data-bigCluster");
+      if (key) {
+        const selection = d3.select(node);
+        selection._cachedRatio = parseFloat(node.getAttribute("data-ratio")) || 0;
+        this._bigClusterLabelCache.set(key, selection);
+      }
+    });
+
+    // Cache cluster labels with their ratio values
+    this.labelsGroup.selectAll("[data-cluster]").nodes().forEach((node) => {
+      const key = node.getAttribute("data-cluster");
+      if (key) {
+        const selection = d3.select(node);
+        selection._cachedRatio = parseFloat(node.getAttribute("data-ratio")) || 0;
+        this._clusterLabelCache.set(key, selection);
+      }
+    });
   }
 
   _drawRegionLabels() {
