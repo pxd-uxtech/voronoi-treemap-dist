@@ -27395,37 +27395,28 @@ class VoronoiTreemap {
         clickFunc(clicked ? "" : { ...d.data, event: e, d, clickArea: area });
       })
       .on("mouseenter", function (e, d) {
-        // Use cached label lookups instead of DOM queries (O(1) vs O(n))
-        const bigClusterKey = d.data.data.bigClusterLabel;
-        const clusterKey = d.data.data.clusterLabel;
+        // Label visibility - use cached lookups (O(1))
+        const label1 = self._bigClusterLabelCache?.get(d.data.data.bigClusterLabel);
+        if (label1) label1.node().style.opacity = 1;
 
-        const label1 = self._bigClusterLabelCache?.get(bigClusterKey);
-        if (label1) label1.attr("opacity", 1);
-
-        const label = self._clusterLabelCache?.get(clusterKey);
-        if (label) label.attr("opacity", 1);
-
-        // Use d3.select(this) instead of DOM query
-        d3.select(this).classed("highlite", true);
+        const label = self._clusterLabelCache?.get(d.data.data.clusterLabel);
+        if (label) label.node().style.opacity = 1;
+        // Highlight is handled by CSS :hover - no JS needed
       })
       .on("mouseleave", function (e, d) {
-        // Use cached label lookups instead of DOM queries (O(1) vs O(n))
-        const bigClusterKey = d.data.data.bigClusterLabel;
-        const clusterKey = d.data.data.clusterLabel;
+        // Label visibility - use cached lookups (O(1))
         const ratioLimit = self.params.ratioLimit;
 
-        const label1 = self._bigClusterLabelCache?.get(bigClusterKey);
+        const label1 = self._bigClusterLabelCache?.get(d.data.data.bigClusterLabel);
         if (label1) {
-          label1.attr("opacity", label1._cachedRatio >= ratioLimit ? 1 : 0);
+          label1.node().style.opacity = label1._cachedRatio >= ratioLimit ? 1 : 0;
         }
 
-        const label = self._clusterLabelCache?.get(clusterKey);
+        const label = self._clusterLabelCache?.get(d.data.data.clusterLabel);
         if (label) {
-          label.attr("opacity", label._cachedRatio >= ratioLimit ? 1 : 0);
+          label.node().style.opacity = label._cachedRatio >= ratioLimit ? 1 : 0;
         }
-
-        // Use d3.select(this) instead of DOM query
-        d3.select(this).classed("highlite", false);
+        // Highlight is handled by CSS :hover - no JS needed
       });
   }
 
@@ -28062,7 +28053,8 @@ body {
     filter: hue-rotate(-5deg) brightness(0.9);
 }
 
-.regionArea3.highlite {
+.regionArea3.highlite,
+.regionArea3:hover {
     filter: hue-rotate(-5deg) brightness(0.95);
 }
 
