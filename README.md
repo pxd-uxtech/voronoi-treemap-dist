@@ -158,7 +158,7 @@ For local HTML files that you can double-click to open (using `file://` protocol
   },
   getCellColors: function(cellColors) { // Callback to receive actual cell colors
     console.log('Cell colors:', cellColors);
-    // cellColors: [{depth: 1, key: "Region A", color: "#afc7dd"}, ...]
+    // cellColors: [{bigLabel: "Region A", bigColor: "#afc7dd", label: "Sub Item", color: "#a5c0d9"}, ...]
   },
   colors: [                // Custom color palette (optional)
     "#FF6B6B",             // Color for largest region

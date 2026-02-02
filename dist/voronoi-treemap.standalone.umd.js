@@ -27637,17 +27637,26 @@ body {
 
     /**
      * Extract cell colors from hierarchy nodes
-     * @returns {Array} Array of {depth, key, color} objects
+     * @returns {Array} Array of {bigLabel, bigColor, label, color} objects for leaf cells
      * @private
      */
     _extractCellColors() {
       const cellColors = [];
 
       this.hierarchy.descendants().forEach(node => {
-        if (node.depth > 0) { // Skip root node (depth 0)
+        // Only include depth 3 (leaf cells) with full hierarchy info
+        if (node.depth === 3 && node.data.data) {
+          const data = node.data.data;
+          // Get depth 1 ancestor (bigCluster) for bigColor
+          let bigClusterNode = node.parent;
+          while (bigClusterNode && bigClusterNode.depth > 1) {
+            bigClusterNode = bigClusterNode.parent;
+          }
+
           cellColors.push({
-            depth: node.depth,
-            key: node.data.key,
+            bigLabel: data.bigClusterLabel,
+            bigColor: bigClusterNode?.color || node.parent?.color,
+            label: data.clusterLabel,
             color: node.color
           });
         }
