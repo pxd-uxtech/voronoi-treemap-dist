@@ -2137,29 +2137,43 @@ body {
 
     /**
      * Extract cell colors from hierarchy nodes
-     * @returns {Array} Array of {bigLabel, bigColor, label, color} objects for leaf cells
+     * @returns {Array} Array of {bigLabel, bigColor, label, color} objects sorted by region size
      * @private
      */
     _extractCellColors() {
       const cellColors = [];
 
+      // Get depth 1 nodes sorted by value (size) descending for ordering
+      const depth1Nodes = this.hierarchy.descendants()
+        .filter(n => n.depth === 1)
+        .sort((a, b) => b.value - a.value);
+
+      // Create order map for sorting
+      const regionOrder = new Map();
+      depth1Nodes.forEach((node, index) => {
+        regionOrder.set(node.data.key, index);
+      });
+
       this.hierarchy.descendants().forEach(node => {
-        // Only include depth 3 (leaf cells) with full hierarchy info
-        if (node.depth === 3 && node.data.data) {
-          const data = node.data.data;
-          // Get depth 1 ancestor (bigCluster) for bigColor
-          let bigClusterNode = node.parent;
-          while (bigClusterNode && bigClusterNode.depth > 1) {
-            bigClusterNode = bigClusterNode.parent;
-          }
+        // Process depth 2 nodes (clusterLabel level)
+        if (node.depth === 2) {
+          // depth 1 = bigLabel (parent), depth 2 = label (current node)
+          const depth1Node = node.parent; // depth 1 ancestor
 
           cellColors.push({
-            bigLabel: data.bigClusterLabel,
-            bigColor: bigClusterNode?.color || node.parent?.color,
-            label: data.clusterLabel,
+            bigLabel: depth1Node?.data?.key,
+            bigColor: depth1Node?.color,
+            label: node.data.key,
             color: node.color
           });
         }
+      });
+
+      // Sort by region size (largest first, following colormap order)
+      cellColors.sort((a, b) => {
+        const orderA = regionOrder.get(a.bigLabel) ?? Infinity;
+        const orderB = regionOrder.get(b.bigLabel) ?? Infinity;
+        return orderA - orderB;
       });
 
       return cellColors;
