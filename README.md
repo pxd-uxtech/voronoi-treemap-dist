@@ -7,7 +7,7 @@ Interactive Voronoi treemap visualization library converted from Observable note
 ### ES Module (Recommended)
 
 ```javascript
-import VoronoiTreemap from 'https://cdn.jsdelivr.net/gh/pxd-uxtech/affinitybubble-dist@1.0.0/dist/voronoi-treemap.esm.js';
+import VoronoiTreemap from 'https://cdn.jsdelivr.net/gh/pxd-uxtech/voronoi-treemap-dist@v1.1.0/dist/voronoi-treemap.esm.js';
 
 const treemap = new VoronoiTreemap();
 const svg = treemap.render(data, options);
@@ -21,7 +21,7 @@ const svg = treemap.render(data, options);
 <script src="https://cdn.jsdelivr.net/npm/d3-voronoi-map@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-voronoi-treemap@1"></script>
 <script src="https://cdn.jsdelivr.net/npm/seedrandom@3"></script>
-<script src="https://cdn.jsdelivr.net/gh/pxd-uxtech/affinitybubble-dist@1.0.0/dist/voronoi-treemap.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/pxd-uxtech/voronoi-treemap-dist@v1.1.0/dist/voronoi-treemap.umd.js"></script>
 
 <script>
   const treemap = new VoronoiTreemap.VoronoiTreemap();
@@ -32,7 +32,7 @@ const svg = treemap.render(data, options);
 ### Minified Version
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/pxd-uxtech/affinitybubble-dist@1.0.0/dist/voronoi-treemap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/pxd-uxtech/voronoi-treemap-dist@v1.1.0/dist/voronoi-treemap.min.js"></script>
 ```
 
 ## Observable Usage
@@ -44,7 +44,7 @@ For Observable notebooks, use the standalone bundle that includes all dependenci
 ```javascript
 // Cell 1: Import library with popup helpers
 {
-  const module = await import("https://cdn.jsdelivr.net/gh/pxd-uxtech/affinitybubble-dist@1.0.3/dist/voronoi-treemap.standalone.js");
+  const module = await import("https://cdn.jsdelivr.net/gh/pxd-uxtech/voronoi-treemap-dist@v1.1.0/dist/voronoi-treemap.standalone.js");
   VoronoiTreemap = module.VoronoiTreemap;
   showVoronoiPopup = module.showVoronoiPopup;  // Import popup helper from library
   return module;
@@ -55,9 +55,9 @@ For Observable notebooks, use the standalone bundle that includes all dependenci
 // Cell 2: Create visualization with popup
 chart = {
   const data = [
-    { region: "A", bigClusterLabel: "Item 1", bubbleSize: "100" },
-    { region: "A", bigClusterLabel: "Item 2", bubbleSize: "80" },
-    { region: "B", bigClusterLabel: "Item 3", bubbleSize: "120" }
+    { metaLabel: "A", label: "Item 1", bubbleSize: "100" },
+    { metaLabel: "A", label: "Item 2", bubbleSize: "80" },
+    { metaLabel: "B", label: "Item 3", bubbleSize: "120" }
   ];
 
   const treemap = new VoronoiTreemap();
@@ -66,8 +66,8 @@ chart = {
     width: 900,
     height: 600,
     maptitle: 'My Treemap',
-    regionPositions: 'auto',
-    showRegion: true,
+    metaLabelPositions: 'auto',
+    showMetaLabel: true,
     showLabel: true,
     showPercent: true,
     pebble: true,
@@ -95,16 +95,16 @@ For local HTML files that you can double-click to open (using `file://` protocol
   <div id="chart"></div>
 
   <!-- Load UMD bundle - works with file:// protocol -->
-  <script src="https://cdn.jsdelivr.net/gh/pxd-uxtech/affinitybubble-dist@v1.0.5/dist/voronoi-treemap.standalone.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/pxd-uxtech/voronoi-treemap-dist@v1.1.0/dist/voronoi-treemap.standalone.umd.js"></script>
 
   <script>
     // Access library from global variable
     const { VoronoiTreemap, showVoronoiPopup } = VoronoiTreemapModule;
 
     const data = [
-      { region: "A", bigClusterLabel: "Item 1", bubbleSize: "100" },
-      { region: "A", bigClusterLabel: "Item 2", bubbleSize: "80" },
-      { region: "B", bigClusterLabel: "Item 3", bubbleSize: "120" }
+      { metaLabel: "A", label: "Item 1", bubbleSize: "100" },
+      { metaLabel: "A", label: "Item 2", bubbleSize: "80" },
+      { metaLabel: "B", label: "Item 3", bubbleSize: "120" }
     ];
 
     const treemap = new VoronoiTreemap();
@@ -131,9 +131,10 @@ For local HTML files that you can double-click to open (using `file://` protocol
 ```javascript
 [
   {
-    region: "Region Name",           // Top-level grouping
-    bigClusterLabel: "Cluster Name", // Label for this item
-    bubbleSize: "100"                // Size value (string or number)
+    metaLabel: "Region Name",  // metaLabel - Top-level grouping
+    label: "Cluster Name",     // label - Label for this item
+    text: "Sub Item Name",     // text - Sub-level label (optional)
+    bubbleSize: "100"          // Size value (string or number)
   }
 ]
 ```
@@ -142,30 +143,30 @@ For local HTML files that you can double-click to open (using `file://` protocol
 
 ```javascript
 {
-  width: 900,              // Canvas width
-  height: 600,             // Canvas height
-  maptitle: 'Title',       // Main title
-  mapcaption: 'Caption',   // Subtitle
-  regionPositions: 'auto', // Region positioning
-  showRegion: true,        // Show region labels
-  showLabel: true,         // Show cluster labels
-  showPercent: true,       // Show percentage labels
-  pebble: true,            // Enable pebble rendering
-  pebbleRound: 5,          // Corner rounding
-  pebbleWidth: 2,          // Pebble stroke width
-  clickFunc: function(d) { // Click handler (receives {data, event})
+  width: 900,                   // Canvas width
+  height: 600,                  // Canvas height
+  maptitle: 'Title',            // Main title
+  mapcaption: 'Caption',        // Subtitle
+  metaLabelPositions: 'auto',   // metaLabel positioning
+  showMetaLabel: true,          // Show metaLabel labels
+  showLabel: true,              // Show label labels
+  showPercent: true,            // Show percentage labels
+  pebble: true,                 // Enable pebble rendering
+  pebbleRound: 5,               // Corner rounding
+  pebbleWidth: 2,               // Pebble stroke width
+  clickFunc: function(d) {      // Click handler (receives {data, event})
     console.log('Clicked:', d);
   },
   getCellColors: function(cellColors) { // Callback to receive actual cell colors
     console.log('Cell colors:', cellColors);
-    // cellColors: [{bigLabel: "Region A", bigColor: "#afc7dd", label: "Sub Item", color: "#a5c0d9"}, ...]
+    // cellColors: [{metaLabel: "Region A", metaColor: "#afc7dd", label: "Sub Item", color: "#a5c0d9"}, ...]
   },
-  colors: [                // Custom color palette (optional)
-    "#FF6B6B",             // Color for largest region
-    "#4ECDC4",             // Color for 2nd largest region
-    "#45B7D1"              // Color for 3rd largest region
+  colors: [                     // Custom color palette (optional)
+    "#FF6B6B",                  // Color for largest metaLabel
+    "#4ECDC4",                  // Color for 2nd largest metaLabel
+    "#45B7D1"                   // Color for 3rd largest metaLabel
   ],
-  regionColors: [          // Override colors for specific regions (optional)
+  metaLabelColors: [            // Override colors for specific metaLabels (optional)
     { key: "긍정", color: "#4CAF50" },
     { key: "부정", color: "#F44336" }
   ]
@@ -198,16 +199,16 @@ treemap.render(data, {
 - Region A (2nd) → second color `#4ECDC4`
 - Region B (3rd) → third color `#45B7D1`
 
-### Using Region-Specific Colors
+### Using metaLabel-Specific Colors
 
-Use `regionColors` to override colors for specific regions by name:
+Use `metaLabelColors` to override colors for specific metaLabels by name:
 
 ```javascript
 treemap.render(data, {
-  regionColors: [
-    { key: "긍정", color: "#4CAF50" },  // Green for "긍정" region
-    { key: "부정", color: "#F44336" },  // Red for "부정" region
-    { key: "중립", color: "#FFC107" }   // Yellow for "중립" region
+  metaLabelColors: [
+    { key: "긍정", color: "#4CAF50" },  // Green for "긍정" metaLabel
+    { key: "부정", color: "#F44336" },  // Red for "부정" metaLabel
+    { key: "중립", color: "#FFC107" }   // Yellow for "중립" metaLabel
   ]
 });
 ```
@@ -226,10 +227,9 @@ treemap.render(data, {
     console.log('Applied colors:', cellColors);
     // Example output:
     // [
-    //   {depth: 1, key: "긍정", color: "#FF6B6B"},    // Largest region
-    //   {depth: 1, key: "중립", color: "#4ECDC4"},    // 2nd largest
-    //   {depth: 1, key: "부정", color: "#45B7D1"},    // 3rd largest
-    //   {depth: 2, key: "매우 좋음", color: "#ff8989"}, // Variations of parent
+    //   {metaLabel: "긍정", metaColor: "#FF6B6B", label: "매우 좋음", color: "#ff8989"},
+    //   {metaLabel: "긍정", metaColor: "#FF6B6B", label: "좋음", color: "#ff9898"},
+    //   {metaLabel: "중립", metaColor: "#4ECDC4", label: "보통", color: "#5dd9d0"},
     //   ...
     // ]
   }
@@ -333,12 +333,18 @@ mutable cellColors = []
 ```javascript
 // Cell 3: Use cellColors in another cell (e.g., create legend)
 {
+  // De-duplicate by metaLabel to get one entry per top-level group
+  const seen = new Set();
   const legend = cellColors
-    .filter(c => c.depth === 1)  // Only regions
+    .filter(c => {
+      if (seen.has(c.metaLabel)) return false;
+      seen.add(c.metaLabel);
+      return true;
+    })
     .map(c => html`
       <div style="display: flex; align-items: center; gap: 8px; margin: 5px 0;">
-        <div style="width: 30px; height: 20px; background: ${c.color}; border: 1px solid #ccc;"></div>
-        <span>${c.key}</span>
+        <div style="width: 30px; height: 20px; background: ${c.metaColor}; border: 1px solid #ccc;"></div>
+        <span>${c.metaLabel}</span>
       </div>
     `);
 
@@ -358,17 +364,22 @@ treemap.render(data, {
   getCellColors: (colors) => {
     cellColors = colors;
     console.log('Cell colors:', colors);
-    // colors: [{depth: 1, key: "Region A", color: "#afc7dd"}, ...]
+    // colors: [{metaLabel: "Region A", metaColor: "#afc7dd", label: "Sub Item", color: "#a5c0d9"}, ...]
   }
 });
 
-// Create legend
+// Create legend - de-duplicate by metaLabel
+const seen = new Set();
 const legendHTML = cellColors
-  .filter(c => c.depth === 1)
+  .filter(c => {
+    if (seen.has(c.metaLabel)) return false;
+    seen.add(c.metaLabel);
+    return true;
+  })
   .map(c => `
     <div style="display: flex; align-items: center; margin: 8px 0;">
-      <div style="width: 40px; height: 25px; background: ${c.color}; border: 2px solid #ddd;"></div>
-      <span style="margin-left: 10px;">${c.key}</span>
+      <div style="width: 40px; height: 25px; background: ${c.metaColor}; border: 2px solid #ddd;"></div>
+      <span style="margin-left: 10px;">${c.metaLabel}</span>
     </div>
   `)
   .join('');
@@ -381,9 +392,14 @@ document.getElementById('legend').innerHTML = legendHTML;
 Each cell object contains:
 ```javascript
 {
-  depth: number,  // Hierarchy depth (1=region, 2=bigClusterLabel, 3=clusterLabel)
-  key: string,    // Cell name/label
-  color: string   // Actual applied color (hex code)
+  metaLabel: string,  // Top-level group name (depth 1=metaLabel, 2=label, 3=text)
+  metaColor: string,  // Color of the top-level group (hex code)
+  label: string,      // Item label
+  color: string,      // Actual applied color for this item (hex code)
+
+  // Legacy fields (still included for backward compatibility)
+  bigLabel: string,   // Same as metaLabel
+  bigColor: string    // Same as metaColor
 }
 ```
 
@@ -436,6 +452,20 @@ The ESM and UMD bundles have peer dependencies (must be loaded separately):
 The standalone bundle includes all dependencies pre-bundled.
 
 ## Version History
+
+### 1.1.0
+- **Renamed hierarchy fields** for clarity:
+  - `region` → `metaLabel`
+  - `bigClusterLabel` → `label`
+  - `clusterLabel` → `text`
+- **Renamed options** to match new field names:
+  - `showRegion` → `showMetaLabel`
+  - `regionPositions` → `metaLabelPositions`
+  - `regionColors` → `metaLabelColors`
+  - `regionLabelRenderer` → `metaLabelRenderer`
+  - `bigClusterLabelRenderer` → `labelRenderer`
+- **Updated `getCellColors` return format**: now includes `metaLabel`/`metaColor` fields (new) alongside `bigLabel`/`bigColor` (legacy)
+- **Full backward compatibility**: old field names and option names continue to work
 
 ### Latest (2026-01-22)
 - **Fixed region color assignment**: Colors now assigned by total bubbleSize (largest first), not data order

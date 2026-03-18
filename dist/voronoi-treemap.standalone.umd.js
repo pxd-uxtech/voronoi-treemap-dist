@@ -26100,7 +26100,7 @@
    * Transforms flat data into a nested hierarchical structure suitable
    * for d3.hierarchy() and voronoi treemap visualization.
    *
-   * Creates a 3-level hierarchy: root -> region -> bigCluster -> cluster
+   * Creates a 3-level hierarchy: root -> metaLabel -> label -> text
    * Each leaf node contains size values for sizing and references to original data.
    */
 
@@ -26108,43 +26108,43 @@
   /**
    * Convert flat data array into nested hierarchy structure for voronoi treemap
    *
-   * @param {Object[]} data - Array of data objects with region, bigClusterLabel, clusterLabel, and bubbleSize fields
-   * @param {string} [key1='bigClusterLabel'] - Field name for first level grouping (big cluster)
-   * @param {string} [key2='clusterLabel'] - Field name for second level grouping (cluster)
+   * @param {Object[]} data - Array of data objects with metaLabel, label, text, and bubbleSize fields
+   * @param {string} [key1='label'] - Field name for first level grouping (label)
+   * @param {string} [key2='text'] - Field name for second level grouping (text)
    * @returns {Object} Nested hierarchy object with key/values structure for d3.hierarchy
    *
    * @example
    * const data = [
-   *   { region: 'A', bigClusterLabel: 'Group1', clusterLabel: 'Item1', bubbleSize: 10 },
-   *   { region: 'A', bigClusterLabel: 'Group1', clusterLabel: 'Item2', bubbleSize: 20 }
+   *   { metaLabel: 'A', label: 'Group1', text: 'Item1', bubbleSize: 10 },
+   *   { metaLabel: 'A', label: 'Group1', text: 'Item2', bubbleSize: 20 }
    * ];
    * const nested = nestingForVoronoi(data);
    * const hierarchy = d3.hierarchy(nested, d => d.values).sum(d => d.size);
    */
   function nestingForVoronoi(
     data,
-    key1 = "bigClusterLabel",
-    key2 = "clusterLabel"
+    key1 = "label",
+    key2 = "text"
   ) {
     // 1. Extract only necessary fields
     const simpleData = data.map((d) => ({
       [key1]: d[key1],
       [key2]: d[key2],
-      region: d.region,
+      metaLabel: d.metaLabel,
       size: d.bubbleSize ?? 1
     }));
 
-    // 2. 3-level grouping with d3.rollups: region -> key1 -> key2
+    // 2. 3-level grouping with d3.rollups: metaLabel -> key1 -> key2
     const nested = d3.rollups(
       simpleData,
       (d) => d3.sum(d.map((v) => v.size)),
-      (d) => d.region,
+      (d) => d.metaLabel,
       (d) => d[key1],
       (d) => d[key2]
     );
 
     // 3. Helper to convert to dictionary format
-    const makeDictionary = (bc, bcData, region) => {
+    const makeDictionary = (bc, bcData, metaLabel) => {
       return bcData.map((k) => {
         const item = {
           [key1]: bc,
@@ -26154,7 +26154,7 @@
 
         const originalData = data.filter(
           (c) =>
-            c.region === region &&
+            c.metaLabel === metaLabel &&
             c[key1] === item[key1] &&
             c[key2] === item[key2]
         );
@@ -26169,11 +26169,11 @@
     };
 
     // 4. Generate final hierarchical structure
-    const kv = nested.map(([region, regionData]) => ({
-      key: region,
-      values: regionData.map(([bc, bcData]) => ({
+    const kv = nested.map(([metaLabel, metaLabelData]) => ({
+      key: metaLabel,
+      values: metaLabelData.map(([bc, bcData]) => ({
         key: bc,
-        values: makeDictionary(bc, bcData, region)
+        values: makeDictionary(bc, bcData, metaLabel)
       }))
     }));
 
@@ -26252,9 +26252,9 @@
      * @returns {number} Calculated offset value
      */
     varFontScale: function (self, d) {
-      const text = d.data.data.clusterLabel ?? d.data.data.bigClusterLabel;
+      const text = d.data.data.text ?? d.data.data.label;
       const [cols, rows] = this.multiline(text, true);
-      return d.data.data.clusterLabel
+      return d.data.data.text
         ? (this.fontScale2(self.hierarchy, d) * 6 * rows) / 2 + 20
         : (this.fontScale(self.hierarchy, d) * 30 * rows) / 2 + 8;
     },
@@ -26361,8 +26361,8 @@
         if (self.params.colorFunc) {
           const originalData = self.data.filter(
             (d) =>
-              d.clusterLabel === hierarchy.data.key &&
-              d.bigClusterLabel === hierarchy.parent.data.key
+              d.text === hierarchy.data.key &&
+              d.label === hierarchy.parent.data.key
           );
           hierarchy.color = self.params.colorFunc(
             originalData,
@@ -26373,7 +26373,7 @@
               siblings: hierarchy.parent.parent.children.map((d) => d.value),
               value: hierarchy.value,
               depth: hierarchy.depth,
-              region: hierarchy.parent.parent
+              metaLabel: hierarchy.parent.parent
             }
           );
         }
@@ -27004,10 +27004,10 @@
       min-width: 200px;
     ">
       <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 0.5em;">
-        ${data.bigClusterLabel || 'N/A'}
+        ${(data.label ?? data.bigClusterLabel) || 'N/A'}
       </div>
       <div style="margin-bottom: 0.3em;">
-        <strong>Region:</strong> ${data.region || 'N/A'}
+        <strong>Region:</strong> ${(data.metaLabel ?? data.region) || 'N/A'}
       </div>
       <div>
         <strong>Size:</strong> ${data.bubbleSize || 'N/A'}
@@ -27062,10 +27062,10 @@
     content.className = 'voronoi-popup-message';
     content.innerHTML = `
     <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 0.5em;">
-      ${data.bigClusterLabel || 'N/A'}
+      ${(data.label ?? data.bigClusterLabel) || 'N/A'}
     </div>
     <div style="margin-bottom: 0.3em;">
-      <strong>Region:</strong> ${data.region || 'N/A'}
+      <strong>Region:</strong> ${(data.metaLabel ?? data.region) || 'N/A'}
     </div>
     <div>
       <strong>Size:</strong> ${data.bubbleSize || 'N/A'}
@@ -27395,18 +27395,18 @@ body {
         pieSize: 1,
         colors: VoronoiTreemap.DEFAULT_COLORS,
         seedRandom: 10,
-        showRegion: false,
+        showMetaLabel: false,
         showPercent: false,
         underLabel: false,
-        regionPositions: null,
+        metaLabelPositions: null,
         forceNodeFunc: null,
         debug: false,
         pebbleRound: 25,
         pebbleWidth: 3,
-        regionColors: [],
+        metaLabelColors: [],
         // Custom label renderer options
-        regionLabelRenderer: null, // (datum, defaultHtml, context) => HTML string
-        bigClusterLabelRenderer: null // (datum, defaultHtml, context) => HTML string
+        metaLabelRenderer: null, // (datum, defaultHtml, context) => HTML string
+        labelRenderer: null // (datum, defaultHtml, context) => HTML string
       };
     }
 
@@ -27434,8 +27434,29 @@ body {
      * @returns {SVGSVGElement} - Generated SVG element
      */
     render(data, options = {}) {
-      this.params = { ...VoronoiTreemap.DEFAULT_OPTIONS, ...options };
-      this.data = data;
+      // Legacy option name support
+      const normalizedOptions = { ...options };
+      if ('showRegion' in normalizedOptions && !('showMetaLabel' in normalizedOptions))
+        normalizedOptions.showMetaLabel = normalizedOptions.showRegion;
+      if ('regionPositions' in normalizedOptions && !('metaLabelPositions' in normalizedOptions))
+        normalizedOptions.metaLabelPositions = normalizedOptions.regionPositions;
+      if ('regionColors' in normalizedOptions && !('metaLabelColors' in normalizedOptions))
+        normalizedOptions.metaLabelColors = normalizedOptions.regionColors;
+      if ('regionLabelRenderer' in normalizedOptions && !('metaLabelRenderer' in normalizedOptions))
+        normalizedOptions.metaLabelRenderer = normalizedOptions.regionLabelRenderer;
+      if ('bigClusterLabelRenderer' in normalizedOptions && !('labelRenderer' in normalizedOptions))
+        normalizedOptions.labelRenderer = normalizedOptions.bigClusterLabelRenderer;
+
+      this.params = { ...VoronoiTreemap.DEFAULT_OPTIONS, ...normalizedOptions };
+
+      // Normalize legacy field names in data
+      this.data = data.map(d => {
+        const normalized = { ...d };
+        if (!('metaLabel' in normalized) && 'region' in normalized) normalized.metaLabel = normalized.region;
+        if (!('label' in normalized) && 'bigClusterLabel' in normalized) normalized.label = normalized.bigClusterLabel;
+        if (!('text' in normalized) && 'clusterLabel' in normalized) normalized.text = normalized.clusterLabel;
+        return normalized;
+      });
 
       this._setupSVG();
       this._prepareData();
@@ -27489,8 +27510,8 @@ body {
       // Use external nestingForVoronoi function
       const nested = nestingForVoronoi(
         this.data,
-        "bigClusterLabel",
-        "clusterLabel"
+        "label",
+        "text"
       );
 
       this.hierarchy = d3.hierarchy(nested, (d) => d.values).sum((d) => d.size);
@@ -27549,20 +27570,20 @@ body {
     }
 
     _createRegionColorScale() {
-      // Calculate total size (bubbleSize) per region
+      // Calculate total size (bubbleSize) per metaLabel
       const regionSizes = d3.rollup(
         this.data,
         (v) => d3.sum(v, (d) => parseFloat(d.bubbleSize) || 1),
-        (d) => d.region
+        (d) => d.metaLabel
       );
 
-      // Sort regions by size (descending - largest first)
+      // Sort metaLabels by size (descending - largest first)
       const sortedRegions = Array.from(regionSizes.entries())
         .sort((a, b) => b[1] - a[1]) // b[1] - a[1]: descending order
-        .map((d) => d[0]); // Extract region names
+        .map((d) => d[0]); // Extract metaLabel names
 
-      const { regionColors, colors: paletteColors } = this.params;
-      const customColorMap = new Map(regionColors.map((d) => [d.key, d.color]));
+      const { metaLabelColors, colors: paletteColors } = this.params;
+      const customColorMap = new Map(metaLabelColors.map((d) => [d.key, d.color]));
 
       let colorMapping = {};
 
@@ -27603,9 +27624,9 @@ body {
       let voronoiTreeMap = d3.voronoiTreemap().prng(seed).clip(ellipse);
       voronoiTreeMap(this.hierarchy);
 
-      if (this.params.regionPositions && this.params.regionPositions !== 'auto') {
+      if (this.params.metaLabelPositions && this.params.metaLabelPositions !== 'auto') {
         const mergedPositions = this._normalizePositions(
-          this.params.regionPositions
+          this.params.metaLabelPositions
         );
 
         const modifiedVoronoiTreeMap =
@@ -27637,7 +27658,7 @@ body {
 
     /**
      * Extract cell colors from hierarchy nodes
-     * @returns {Array} Array of {bigLabel, bigColor, label, color} objects sorted by region size
+     * @returns {Array} Array of {metaLabel, metaColor, label, color} objects sorted by metaLabel size
      * @private
      */
     _extractCellColors() {
@@ -27655,24 +27676,26 @@ body {
       });
 
       this.hierarchy.descendants().forEach(node => {
-        // Process depth 2 nodes (clusterLabel level)
+        // Process depth 2 nodes (label level)
         if (node.depth === 2) {
-          // depth 1 = bigLabel (parent), depth 2 = label (current node)
+          // depth 1 = metaLabel (parent), depth 2 = label (current node)
           const depth1Node = node.parent; // depth 1 ancestor
 
           cellColors.push({
-            bigLabel: depth1Node?.data?.key,
-            bigColor: depth1Node?.color,
+            metaLabel: depth1Node?.data?.key,   // new
+            bigLabel: depth1Node?.data?.key,     // legacy
+            metaColor: depth1Node?.color,        // new
+            bigColor: depth1Node?.color,         // legacy
             label: node.data.key,
             color: node.color
           });
         }
       });
 
-      // Sort by region size (largest first, following colormap order)
+      // Sort by metaLabel size (largest first, following colormap order)
       cellColors.sort((a, b) => {
-        const orderA = regionOrder.get(a.bigLabel) ?? Infinity;
-        const orderB = regionOrder.get(b.bigLabel) ?? Infinity;
+        const orderA = regionOrder.get(a.metaLabel) ?? Infinity;
+        const orderB = regionOrder.get(b.metaLabel) ?? Infinity;
         return orderA - orderB;
       });
 
@@ -27801,10 +27824,10 @@ body {
         })
         .on("mouseenter", function (e, d) {
           // Label visibility - use cached lookups (O(1))
-          const label1 = self._bigClusterLabelCache?.get(d.data.data.bigClusterLabel);
+          const label1 = self._bigClusterLabelCache?.get(d.data.data.label);
           if (label1) label1.node().style.opacity = 1;
 
-          const label = self._clusterLabelCache?.get(d.data.data.clusterLabel);
+          const label = self._clusterLabelCache?.get(d.data.data.text);
           if (label) label.node().style.opacity = 1;
           // Highlight is handled by CSS :hover - no JS needed
         })
@@ -27812,12 +27835,12 @@ body {
           // Label visibility - use cached lookups (O(1))
           const ratioLimit = self.params.ratioLimit;
 
-          const label1 = self._bigClusterLabelCache?.get(d.data.data.bigClusterLabel);
+          const label1 = self._bigClusterLabelCache?.get(d.data.data.label);
           if (label1) {
             label1.node().style.opacity = label1._cachedRatio >= ratioLimit ? 1 : 0;
           }
 
-          const label = self._clusterLabelCache?.get(d.data.data.clusterLabel);
+          const label = self._clusterLabelCache?.get(d.data.data.text);
           if (label) {
             label.node().style.opacity = label._cachedRatio >= ratioLimit ? 1 : 0;
           }
@@ -27860,12 +27883,12 @@ body {
     }
 
     _drawRegionLabels() {
-      const { showRegion, regionLabelRenderer } = this.params;
+      const { showMetaLabel, metaLabelRenderer } = this.params;
 
       const regionNodes = this.allNodes.filter((d) => d.depth === 1);
 
       // If custom renderer exists, use foreignObject
-      if (regionLabelRenderer) {
+      if (metaLabelRenderer) {
         this.regionLabelsGroup
           .selectAll("foreignObject")
           .data(regionNodes)
@@ -27896,7 +27919,7 @@ body {
                 VoronoiTreemapHelpers.getLabelHeightOffset(this, d);
             }
           )
-          .style("opacity", showRegion ? 1 : 0)
+          .style("opacity", showMetaLabel ? 1 : 0)
           .style("pointer-events", "none")
           .style("overflow", "visible")
           .append("xhtml:div")
@@ -27908,7 +27931,7 @@ body {
           .html((d) => {
             const defaultHtml = VoronoiTreemapHelpers.multiline(d.data.key);
             const context = VoronoiTreemapHelpers.createLabelContext(this, d, 1);
-            return regionLabelRenderer(d, defaultHtml, context);
+            return metaLabelRenderer(d, defaultHtml, context);
           });
       } else {
         // Default text rendering
@@ -27925,8 +27948,8 @@ body {
             (d) =>
               VoronoiTreemapHelpers.fontScale(this.hierarchy, d) * 1.15 + "em"
           )
-          .style("fill-opacity", showRegion ? 1 : 0)
-          .style("stroke-opacity", showRegion ? 0.85 : 0)
+          .style("fill-opacity", showMetaLabel ? 1 : 0)
+          .style("stroke-opacity", showMetaLabel ? 0.85 : 0)
           .style(
             "stroke",
             (d) => `${VoronoiTreemapHelpers.getHSLColor(d.color, 0, -0.05, -0.2)}`
@@ -27948,12 +27971,12 @@ body {
     }
 
     _drawBigClusterLabels() {
-      const { ratioLimit, bigClusterLabelRenderer } = this.params;
+      const { ratioLimit, labelRenderer } = this.params;
 
       const bigClusterNodes = this.allNodes.filter((d) => d.depth === 2);
 
       // If custom renderer exists, use foreignObject
-      if (bigClusterLabelRenderer) {
+      if (labelRenderer) {
         this.bigLabelsGroup
           .selectAll("foreignObject")
           .data(bigClusterNodes)
@@ -28001,7 +28024,7 @@ body {
           .html((d) => {
             const defaultHtml = VoronoiTreemapHelpers.multiline(d.data.key);
             const context = VoronoiTreemapHelpers.createLabelContext(this, d, 2);
-            return bigClusterLabelRenderer(d, defaultHtml, context);
+            return labelRenderer(d, defaultHtml, context);
           });
       } else {
         // Default text rendering
@@ -28108,12 +28131,12 @@ body {
               d.polygon.site.y +
                 VoronoiTreemapHelpers.fontScale1(
                   this.hierarchy,
-                  d.data.data.bigClusterLabel,
+                  d.data.data.label,
                   d.parent.value
                 ) *
                   8 *
                   (VoronoiTreemapHelpers.multiline(
-                    d.data.data.bigClusterLabel,
+                    d.data.data.label,
                     true
                   )[1] +
                     0.5)
@@ -28140,7 +28163,7 @@ body {
         )
         .attr(
           "data-pop",
-          (d) => d.data.data.clusterLabel ?? d.data.data.bigClusterLabel
+          (d) => d.data.data.text ?? d.data.data.label
         )
         .attr(
           "transform",
@@ -28159,9 +28182,9 @@ body {
     // === 4. Post-processing and Effects Methods ===
 
     _applyPostEffects() {
-      const { showRegion, pebbleRound, pebbleWidth } = this.params;
+      const { showMetaLabel, pebbleRound, pebbleWidth } = this.params;
 
-      if (showRegion) {
+      if (showMetaLabel) {
         this.labelAdjuster.adjust(this.svg.node(), { verticalSpacing: 0 });
       }
 
