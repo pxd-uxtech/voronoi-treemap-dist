@@ -140,7 +140,7 @@
     _renderDepth2Outlines(cell, outlineGroup, colorVarFunc) {
       const self = this;
 
-      cell.selectAll('.regionArea2').each(function (datum) {
+      cell.selectAll('.labelArea').each(function (datum) {
         const path = self.d3.select(this);
         const polygon = datum.polygon;
 
@@ -177,7 +177,7 @@
     _renderDepth1Outlines(cell, outlineGroup, round, width) {
       const self = this;
 
-      cell.selectAll('.regionArea1').each(function (datum) {
+      cell.selectAll('.metaLabelArea').each(function (datum) {
         const polygon = datum.polygon;
 
         if (polygon && polygon.length > 0) {
@@ -367,11 +367,11 @@
       setTimeout(() => {
         const svg = d3.select(treemap);
 
-        svg.selectAll(".field").each(function () {
+        svg.selectAll(".label-item").each(function () {
           adjustFieldLabel(d3.select(this));
         });
 
-        svg.selectAll(".sector").each(function () {
+        svg.selectAll(".text-item").each(function () {
           adjustSectorLabel(d3.select(this));
         });
       }, delay);
@@ -519,7 +519,7 @@
 
         const parentFieldElement = d3
           .select(treemap)
-          .selectAll(".field")
+          .selectAll(".label-item")
           .filter((d) => d?.data?.key === data.parent?.data?.key)
           .nodes()[0];
 
@@ -1723,40 +1723,40 @@ body {
     filter: brightness(0.9);
 }
 
-.regionArea1 {
+.metaLabelArea {
     stroke: #464749aa;
     stroke-width: 1.5;
 }
 
-.regionArea2 {
+.labelArea {
     stroke: #46474955;
     stroke-width: 0.7;
 }
 
-.regionArea3 {
+.textArea {
     stroke: #ffffffb0;
     stroke-width: 0.5;
     cursor: pointer;
 }
 
-.regionArea3.clicked {
+.textArea.clicked {
     stroke-width: 1px;
     filter: hue-rotate(-5deg) brightness(0.9);
 }
 
-.regionArea3.highlite,
-.regionArea3:hover {
+.textArea.highlite,
+.textArea:hover {
     filter: hue-rotate(-5deg) brightness(0.95);
 }
 
-.field {
+.label-item {
     font-size: 1.2em;
     font-weight: 600;
     fill: #000d;
     pointer-events: none;
 }
 
-.sector {
+.text-item {
     font-size: 0.8em;
     font-weight: 400;
     fill: #a95b5bdd;
@@ -1764,14 +1764,14 @@ body {
     pointer-events: none;
 }
 
-.budget {
+.percent-label {
     fill: #c25a50;
     font-size: 12px;
     cursor: default;
     pointer-events: none;
 }
 
-.percent .budget {
+.percent .percent-label {
     fill: #fff;
 }
 
@@ -1984,14 +1984,12 @@ body {
     // === 1. Initial Setup Methods ===
 
     _setupSVG() {
-      // Create independent SVG element (no container needed)
+      // SVG size = exactly params.width × params.height
+      // Voronoi drawing area = total minus margins
       this.svg = d3
         .create("svg")
-        .attr("width", this.params.width + this.margin.left + this.margin.right)
-        .attr(
-          "height",
-          this.params.height + this.margin.top + this.margin.bottom
-        );
+        .attr("width", this.params.width)
+        .attr("height", this.params.height);
 
       // Inject bubble styles (includes :hover rules)
       this.svg.append("style").text(getBubbleStyles());
@@ -2002,8 +2000,10 @@ body {
         .attr("height", "100%")
         .style("fill", "#fff");
 
-      this.width = this.params.width * Math.sqrt(this.params.pieSize);
-      this.height = this.width * (this.params.height / this.params.width);
+      const innerWidth = this.params.width - this.margin.left - this.margin.right;
+      const innerHeight = this.params.height - this.margin.top - this.margin.bottom;
+      this.width = innerWidth * Math.sqrt(this.params.pieSize);
+      this.height = this.width * (innerHeight / innerWidth);
     }
 
     _prepareData() {
@@ -2119,27 +2119,30 @@ body {
         ];
       });
 
-      const seed = d3.seedrandom(this.params.seedRandom);
+      const hasCustomPositions =
+        Array.isArray(this.params.metaLabelPositions) &&
+        this.params.metaLabelPositions.length > 0;
 
-      let voronoiTreeMap = d3.voronoiTreemap().prng(seed).clip(ellipse);
-      voronoiTreeMap(this.hierarchy);
-
-      if (this.params.metaLabelPositions && this.params.metaLabelPositions !== 'auto') {
+      if (hasCustomPositions) {
+        // Custom positions: run only once with initial positions.
+        // Do NOT run the default voronoi first — it would consume the PRNG
+        // and make the second run non-deterministic even with a fixed seed.
         const mergedPositions = this._normalizePositions(
           this.params.metaLabelPositions
         );
-
-        const modifiedVoronoiTreeMap =
-          VoronoiTreemapHelpers.createCustomVoronoiAlgorithm(
-            this,
-            this.params.debug
-          )
-            .size([this.width, this.height])
-            .clip(ellipse)
-            .prng(seed)
-            .initialPositions(mergedPositions);
-
-        modifiedVoronoiTreeMap(this.hierarchy);
+        const seed = d3.seedrandom(this.params.seedRandom);
+        VoronoiTreemapHelpers.createCustomVoronoiAlgorithm(
+          this,
+          this.params.debug
+        )
+          .size([this.width, this.height])
+          .clip(ellipse)
+          .prng(seed)
+          .initialPositions(mergedPositions)(this.hierarchy);
+      } else {
+        // Default: single voronoi run with fixed seed
+        const seed = d3.seedrandom(this.params.seedRandom);
+        d3.voronoiTreemap().prng(seed).clip(ellipse)(this.hierarchy);
       }
 
       VoronoiTreemapHelpers.colorHierarchy(this, this.hierarchy);
@@ -2312,7 +2315,10 @@ body {
         .append("path")
         .attr("d", (d) => "M" + d.polygon.join("L") + "Z")
         .style("fill", (d) => d.color ?? d.parent.color)
-        .attr("class", (d) => `regionArea${d.depth} area-${d.id}`)
+        .attr("class", (d) => {
+          const areaClass = d.depth === 1 ? "metaLabelArea" : d.depth === 2 ? "labelArea" : d.depth === 3 ? "textArea" : "rootArea";
+          return `${areaClass} area-${d.id}`;
+        })
         .style("fill-opacity", (d) => (d.depth === 3 ? 1 : 0))
         .attr("pointer-events", (d) => (d.depth === 3 ? "all" : "none"))
         .on("click", function (e, d) {
@@ -2533,7 +2539,7 @@ body {
           .data(bigClusterNodes)
           .enter()
           .append("text")
-          .attr("class", "field")
+          .attr("class", "label-item")
           .attr("data-bigCluster", (d) => d.data.key)
           .attr("text-anchor", "start")
           .attr("data-value", (d) => d.value)
@@ -2574,7 +2580,7 @@ body {
         .data(this.allNodes.filter((d) => d.depth === percent_label_depth))
         .enter()
         .append("text")
-        .attr("class", (d) => `budget percent label-${d.id}`)
+        .attr("class", (d) => `percent-label percent label-${d.id}`)
         .attr("text-anchor", "middle")
         .style(
           "font-size",
@@ -2611,7 +2617,7 @@ body {
         .data(this.allNodes.filter((d) => d.depth === 3))
         .enter()
         .append("text")
-        .attr("class", (d) => `sector label-${d.id}`)
+        .attr("class", (d) => `text-item label-${d.id}`)
         .attr("data-cluster", (d) => d.data.key)
         .attr("data-value", (d) => d.value)
         .attr("data-ratio", (d) => d.value / this.totalValue)
@@ -2655,7 +2661,7 @@ body {
         .data(this.allNodes.filter((d) => d.depth === 3))
         .enter()
         .append("text")
-        .attr("class", (d) => `budget label-${d.id}`)
+        .attr("class", (d) => `percent-label label-${d.id}`)
         .attr("text-anchor", "middle")
         .style(
           "font-size",

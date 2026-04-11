@@ -2,6 +2,10 @@
 
 Interactive Voronoi treemap visualization library converted from Observable notebook.
 
+![Voronoi Treemap Example](files/example-preview.png)
+
+*pebbleRound: 20, pebbleWidth: 5*
+
 ## CDN Usage (jsdelivr)
 
 ### ES Module (Recommended)
@@ -134,7 +138,7 @@ For local HTML files that you can double-click to open (using `file://` protocol
     metaLabel: "Region Name",  // metaLabel - Top-level grouping
     label: "Cluster Name",     // label - Label for this item
     text: "Sub Item Name",     // text - Sub-level label (optional)
-    bubbleSize: "100"          // Size value (string or number)
+    bubbleSize: 100            // Size value (number; string also accepted)
   }
 ]
 ```
@@ -147,7 +151,7 @@ For local HTML files that you can double-click to open (using `file://` protocol
   height: 600,                  // Canvas height
   maptitle: 'Title',            // Main title
   mapcaption: 'Caption',        // Subtitle
-  metaLabelPositions: 'auto',   // metaLabel positioning
+  metaLabelPositions: 'auto',   // Cell position control: 'auto' or array of {key, depth, x, y}
   showMetaLabel: true,          // Show metaLabel labels
   showLabel: true,              // Show label labels
   showPercent: true,            // Show percentage labels
@@ -172,6 +176,141 @@ For local HTML files that you can double-click to open (using `file://` protocol
   ]
 }
 ```
+
+## Custom Label Renderers
+
+Use `metaLabelRenderer` and `labelRenderer` to fully customize label appearance by returning an HTML string from a function.
+
+### `metaLabelRenderer`
+
+Customizes labels for the top-level group (metaLabel).
+
+```javascript
+metaLabelRenderer: (d, defaultHtml, ctx) => {
+  // d           - data node
+  // defaultHtml - default HTML string
+  // ctx         - context object:
+  //   ctx.key         - metaLabel name
+  //   ctx.fontSize    - computed font size (em base value)
+  //   ctx.darkerColor - a darker shade of the region color (for outlines/strokes)
+  //   ctx.percentText - percentage string (e.g. "34.5%")
+
+  return `<div>...</div>`;  // return custom HTML
+  // return "" to hide the label
+  // return defaultHtml to keep default rendering
+}
+```
+
+### Example: Non-overlapping percent display
+
+Uses `-webkit-text-stroke` to render a colored outline behind text, keeping labels readable over complex backgrounds. Auto-generated keys like "cluster 1" are hidden.
+
+```javascript
+treemap.render(data, {
+  showMetaLabel: true,
+  showPercent: true,
+  metaLabelRenderer: (d, defaultHtml, ctx) => {
+    const keyStr = String(ctx.key ?? "");
+
+    // Hide numeric or "cluster N" keys
+    if (/^\d+$/.test(keyStr) || /^cluster\s*\d+$/i.test(keyStr)) {
+      return "";
+    }
+
+    return `
+      <div style="text-align:center; color:#fff;">
+        <div style="
+          font-weight: 600;
+          font-size: ${ctx.fontSize * 0.95}em;
+          line-height: 1.1;
+          color: #fff;
+          white-space: nowrap;
+          -webkit-text-stroke: 3px ${ctx.darkerColor};
+          paint-order: stroke fill;
+        ">
+          ${ctx.key}<br>
+          <small style="
+            font-size: 80%;
+            -webkit-text-stroke: 1px ${ctx.darkerColor};
+          ">${ctx.percentText}</small>
+        </div>
+      </div>`;
+  }
+});
+```
+
+**Key points:**
+- `paint-order: stroke fill` — draws the outline before the fill so it doesn't eat into the text
+- `-webkit-text-stroke` — uses the region's darker color as an outline for contrast
+- `ctx.darkerColor` — automatically calculated by the library; no need to specify manually
+- `return ""` — hides the label for small or unlabeled regions
+
+### `labelRenderer`
+
+Customizes labels for the second level (label) in the same way.
+
+```javascript
+treemap.render(data, {
+  labelRenderer: (d, defaultHtml, ctx) => {
+    // ctx.key, ctx.fontSize, ctx.darkerColor, ctx.percentText work identically
+    return `<div style="color:#fff;">${ctx.key}</div>`;
+  }
+});
+```
+
+## Cell Position Control
+
+Use `metaLabelPositions` to control where regions appear in the chart. By default (`'auto'`), the library places them automatically.
+
+### Manual positioning
+
+Pass an array of `{ key, depth, x, y }` objects. Coordinates are arbitrary — the library normalizes them to fit the chart. Only `depth: 1` (metaLabel) entries are required; `depth: 2` (label) and `depth: 3` (text) are optional for finer control.
+
+```javascript
+treemap.render(data, {
+  metaLabelPositions: [
+    { key: '긍정', depth: 1, x: 700, y: 200 },  // right side
+    { key: '중립', depth: 1, x: 400, y: 300 },  // center
+    { key: '부정', depth: 1, x: 100, y: 400 }   // left side
+  ]
+});
+```
+
+**Field reference:**
+- `key` — the `metaLabel`, `label`, or `text` value from your data
+- `depth` — hierarchy level: `1` = metaLabel, `2` = label, `3` = text
+- `x`, `y` — position hint (any scale; normalized to 0.15–0.85 range automatically)
+
+### Quadrant layout example
+
+```javascript
+treemap.render(data, {
+  metaLabelPositions: [
+    { key: 'A', depth: 1, x: 0, y: 0 },   // top-left
+    { key: 'B', depth: 1, x: 1, y: 0 },   // top-right
+    { key: 'C', depth: 1, x: 0, y: 1 },   // bottom-left
+    { key: 'D', depth: 1, x: 1, y: 1 }    // bottom-right
+  ]
+});
+```
+
+### Circular layout example
+
+```javascript
+const cx = 400, cy = 300, r = 200;
+const n = 5;
+
+treemap.render(data, {
+  metaLabelPositions: Array.from({ length: n }, (_, i) => ({
+    key: categories[i],
+    depth: 1,
+    x: cx + Math.cos((2 * Math.PI * i) / n) * r,
+    y: cy + Math.sin((2 * Math.PI * i) / n) * r
+  }))
+});
+```
+
+> **Note:** Position hints guide the voronoi algorithm's initial state — the final layout is determined by cell sizes. Larger cells will expand to fill their allotted area, so exact pixel placement is not guaranteed.
 
 ## Color Assignment
 
@@ -298,8 +437,8 @@ document.head.appendChild(style);
 
 This includes:
 - KoddiUD OnGothic font faces (Regular & Bold)
-- `.region`, `.area1`, `.area2`, `.regionArea1~3` styles
-- `.field`, `.sector`, `.budget` label styles
+- `.region`, `.metaLabelArea`, `.labelArea`, `.textArea` styles
+- `.label-item`, `.text-item`, `.percent-label` label styles
 - Highlight and click states (`.highlite`, `.clicked`)
 - Popup styles (`.voronoi-popup-content`, `.voronoi-popup-message`)
 
@@ -420,11 +559,11 @@ Each cell object contains:
   font-weight: 700;
 }
 
-.area2.highlite {
+.textArea.highlite {
   filter: hue-rotate(-5deg) brightness(0.95);
 }
 
-.area2.clicked {
+.textArea.clicked {
   stroke: #000;
   stroke-width: 3px;
   filter: brightness(0.9);
@@ -452,6 +591,17 @@ The ESM and UMD bundles have peer dependencies (must be loaded separately):
 The standalone bundle includes all dependencies pre-bundled.
 
 ## Version History
+
+### 1.2.0
+- **Fixed SVG sizing**: `width` and `height` options now define the actual SVG output size. Previously the SVG was `width+100` × `height+100` due to internal margins, causing the chart to overflow and clip its container.
+- **Renamed CSS classes** for clarity (breaking change — update any custom styles):
+  - `regionArea1` → `metaLabelArea`
+  - `regionArea2` → `labelArea`
+  - `regionArea3` → `textArea`
+  - `.field` → `.label-item`
+  - `.sector` → `.text-item`
+  - `.budget` → `.percent-label`
+- **Added `metaLabelRenderer` and `labelRenderer` documentation** with HTML customization example
 
 ### 1.1.0
 - **Renamed hierarchy fields** for clarity:
