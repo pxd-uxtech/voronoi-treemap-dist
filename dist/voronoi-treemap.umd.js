@@ -515,10 +515,10 @@
 
         const originallyAbove = labelBox.y < parentBox.y;
 
-        // Primary direction: away from parent
+        // Primary direction: away from parent (+2px gap to clear overlap check)
         const proposedPrimary = originallyAbove
-          ? parentBox.originalY - labelBox.height + tspanOffset
-          : parentBox.originalY + parentBox.height + tspanOffset;
+          ? parentBox.originalY - labelBox.height - 2 + tspanOffset
+          : parentBox.originalY + parentBox.height + 2 + tspanOffset;
 
         const primaryFits = originallyAbove
           ? proposedPrimary >= cellBounds.minY
@@ -528,10 +528,10 @@
           return { x: labelBox.originalX, y: proposedPrimary };
         }
 
-        // Secondary direction: past the parent on the other side
+        // Secondary direction: past the parent on the other side (+2px gap)
         const proposedSecondary = originallyAbove
-          ? parentBox.originalY + parentBox.height + tspanOffset
-          : parentBox.originalY - labelBox.height + tspanOffset;
+          ? parentBox.originalY + parentBox.height + 2 + tspanOffset
+          : parentBox.originalY - labelBox.height - 2 + tspanOffset;
 
         const secondaryFits = originallyAbove
           ? proposedSecondary + labelBox.height <= cellBounds.maxY
