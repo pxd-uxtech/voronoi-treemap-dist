@@ -25943,6 +25943,29 @@ class LabelAdjuster {
     }
 
     /**
+     * Get bounding box from a foreignObject element (metaLabelRenderer case)
+     * foreignObject uses x/y/width/height attributes instead of transform+getBBox
+     * @param {Object} element - D3 selection of foreignObject element
+     * @returns {Object|null} Bounding box info or null if element invalid
+     */
+    function getForeignObjectBox(element) {
+      const x = parseFloat(element.attr("x") || 0);
+      const y = parseFloat(element.attr("y") || 0);
+      const width = parseFloat(element.attr("width") || 0);
+      const height = parseFloat(element.attr("height") || 0);
+      if (width === 0 || height === 0) return null;
+      return {
+        originalX: x + width / 2,
+        originalY: y,
+        x: x + width / 2,
+        y: y + height / 2,
+        width,
+        height,
+        tspanCount: 1
+      };
+    }
+
+    /**
      * Get cell polygon bounds from node data
      * @param {Object} data - Node data with polygon
      * @returns {Object|null} { minX, maxX, minY, maxY } or null
@@ -25979,28 +26002,45 @@ class LabelAdjuster {
         return { x: labelBox.originalX, y: labelBox.originalY };
       }
 
-      const originallyAbove = labelBox.y < parentBox.y;
-      let newY = labelBox.y;
+      const tspanOffset =
+        labelBox.tspanCount > 1
+          ? labelBox.height / (labelBox.tspanCount - 1) / 4
+          : 0;
 
-      if (originallyAbove) {
-        const proposedY =
-          parentBox.originalY -
-          labelBox.height +
-          (labelBox.tspanCount > 1
-            ? labelBox.height / (labelBox.tspanCount - 1) / 4
-            : 0);
-        if (proposedY >= cellBounds.minY) newY = proposedY;
-      } else {
-        const proposedY =
-          parentBox.originalY +
-          parentBox.height +
-          (labelBox.tspanCount > 1
-            ? labelBox.height / (labelBox.tspanCount - 1) / 4
-            : 0);
-        if (proposedY + labelBox.height <= cellBounds.maxY) newY = proposedY;
+      const originallyAbove = labelBox.y < parentBox.y;
+
+      // Primary direction: away from parent
+      const proposedPrimary = originallyAbove
+        ? parentBox.originalY - labelBox.height + tspanOffset
+        : parentBox.originalY + parentBox.height + tspanOffset;
+
+      const primaryFits = originallyAbove
+        ? proposedPrimary >= cellBounds.minY
+        : proposedPrimary + labelBox.height <= cellBounds.maxY;
+
+      if (primaryFits) {
+        return { x: labelBox.originalX, y: proposedPrimary };
       }
 
-      return { x: labelBox.originalX, y: newY };
+      // Secondary direction: past the parent on the other side
+      const proposedSecondary = originallyAbove
+        ? parentBox.originalY + parentBox.height + tspanOffset
+        : parentBox.originalY - labelBox.height + tspanOffset;
+
+      const secondaryFits = originallyAbove
+        ? proposedSecondary + labelBox.height <= cellBounds.maxY
+        : proposedSecondary >= cellBounds.minY;
+
+      if (secondaryFits) {
+        return { x: labelBox.originalX, y: proposedSecondary };
+      }
+
+      // Neither fits cleanly — push as far as possible in primary direction
+      const clampedY = originallyAbove
+        ? Math.max(cellBounds.minY, proposedPrimary)
+        : Math.min(cellBounds.maxY - labelBox.height, proposedPrimary);
+
+      return { x: labelBox.originalX, y: clampedY };
     }
 
     /**
@@ -26050,17 +26090,32 @@ class LabelAdjuster {
       const data = fieldLabel.datum();
       if (!data || !data.parent) return;
 
-      const parentRegionElement = d3
+      const parentKey = data.parent?.data?.key;
+
+      // Default renderer: SVG text.region
+      let parentRegionElement = d3
         .select(treemap)
         .selectAll(".region")
-        .filter((d) => d?.data?.key === data.parent?.data?.key)
+        .filter((d) => d?.data?.key === parentKey)
         .nodes()[0];
+
+      // Custom renderer (metaLabelRenderer): foreignObject.region-label-foreign
+      if (!parentRegionElement) {
+        parentRegionElement = d3
+          .select(treemap)
+          .selectAll(".region-label-foreign")
+          .filter((d) => d?.data?.key === parentKey)
+          .nodes()[0];
+      }
 
       if (!parentRegionElement) return;
 
       const regionLabel = d3.select(parentRegionElement);
       const fieldBox = getLabelBox(fieldLabel);
-      const regionBox = getLabelBox(regionLabel);
+      const isForeignObject = parentRegionElement.tagName === "foreignObject";
+      const regionBox = isForeignObject
+        ? getForeignObjectBox(regionLabel)
+        : getLabelBox(regionLabel);
       const cellBounds = getCellBounds(data);
 
       if (
