@@ -518,8 +518,12 @@ class LabelAdjuster {
         return { x: labelBox.originalX, y: proposedSecondary };
       }
 
-      // Neither direction fits within cell — leave in original position
-      return { x: labelBox.originalX, y: labelBox.originalY };
+      // Neither direction fits fully — clamp to cell boundary
+      const clampedY = originallyAbove
+        ? Math.max(cellBounds.minY, proposedPrimary)
+        : Math.min(cellBounds.maxY - labelBox.height, proposedPrimary);
+
+      return { x: labelBox.originalX, y: clampedY };
     }
 
     /**
