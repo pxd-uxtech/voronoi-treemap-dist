@@ -541,12 +541,8 @@
           return { x: labelBox.originalX, y: proposedSecondary };
         }
 
-        // Neither fits cleanly — push as far as possible in primary direction
-        const clampedY = originallyAbove
-          ? Math.max(cellBounds.minY, proposedPrimary)
-          : Math.min(cellBounds.maxY - labelBox.height, proposedPrimary);
-
-        return { x: labelBox.originalX, y: clampedY };
+        // Neither direction fits within cell — leave in original position
+        return { x: labelBox.originalX, y: labelBox.originalY };
       }
 
       /**
