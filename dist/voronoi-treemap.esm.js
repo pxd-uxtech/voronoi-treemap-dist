@@ -490,38 +490,41 @@ class LabelAdjuster {
           ? labelBox.height / (labelBox.tspanCount - 1) / 4
           : 0;
 
-      const originallyAbove = labelBox.y < parentBox.y;
+      // Prefer the direction with more available space
+      const spaceAbove = parentBox.originalY - cellBounds.minY;
+      const spaceBelow = cellBounds.maxY - (parentBox.originalY + parentBox.height);
+      const preferBelow = spaceBelow > spaceAbove;
 
-      // Primary direction: away from parent (+2px gap to clear overlap check)
-      const proposedPrimary = originallyAbove
-        ? parentBox.originalY - labelBox.height - 2 + tspanOffset
-        : parentBox.originalY + parentBox.height + 2 + tspanOffset;
+      // Primary direction: whichever side has more room (+2px gap)
+      const proposedPrimary = preferBelow
+        ? parentBox.originalY + parentBox.height + 2 + tspanOffset
+        : parentBox.originalY - labelBox.height - 2 + tspanOffset;
 
-      const primaryFits = originallyAbove
-        ? proposedPrimary >= cellBounds.minY
-        : proposedPrimary + labelBox.height <= cellBounds.maxY;
+      const primaryFits = preferBelow
+        ? proposedPrimary + labelBox.height <= cellBounds.maxY
+        : proposedPrimary >= cellBounds.minY;
 
       if (primaryFits) {
         return { x: labelBox.originalX, y: proposedPrimary };
       }
 
-      // Secondary direction: past the parent on the other side (+2px gap)
-      const proposedSecondary = originallyAbove
-        ? parentBox.originalY + parentBox.height + 2 + tspanOffset
-        : parentBox.originalY - labelBox.height - 2 + tspanOffset;
+      // Secondary direction: the other side (+2px gap)
+      const proposedSecondary = preferBelow
+        ? parentBox.originalY - labelBox.height - 2 + tspanOffset
+        : parentBox.originalY + parentBox.height + 2 + tspanOffset;
 
-      const secondaryFits = originallyAbove
-        ? proposedSecondary + labelBox.height <= cellBounds.maxY
-        : proposedSecondary >= cellBounds.minY;
+      const secondaryFits = preferBelow
+        ? proposedSecondary >= cellBounds.minY
+        : proposedSecondary + labelBox.height <= cellBounds.maxY;
 
       if (secondaryFits) {
         return { x: labelBox.originalX, y: proposedSecondary };
       }
 
-      // Neither direction fits fully — clamp to cell boundary
-      const clampedY = originallyAbove
-        ? Math.max(cellBounds.minY, proposedPrimary)
-        : Math.min(cellBounds.maxY - labelBox.height, proposedPrimary);
+      // Neither direction fits fully — clamp to the side with more space
+      const clampedY = preferBelow
+        ? Math.min(cellBounds.maxY - labelBox.height, proposedPrimary)
+        : Math.max(cellBounds.minY, proposedPrimary);
 
       return { x: labelBox.originalX, y: clampedY };
     }
