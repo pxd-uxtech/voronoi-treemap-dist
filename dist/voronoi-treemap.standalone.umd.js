@@ -28277,6 +28277,7 @@ body {
    * @param {Object} [clicked.data] - Additional data associated with the cell
    * @param {Object} [options] - Popup configuration options
    * @param {string} [options.format="{text}"] - Template string for popup content (e.g., "{key}: {value}")
+   * @param {Function} [options.getData] - Custom function to extract data from clicked object. Receives clicked, returns data object. If omitted, uses default spread logic.
    * @param {string} [options.popupId="voronoi-popup"] - DOM ID for the popup element
    * @param {string} [options.className="voronoi-popup-container"] - CSS class for the popup
    * @param {Function} [options.onClose] - Callback function when popup is closed
@@ -28285,6 +28286,7 @@ body {
   function showVoronoiPopup(clicked, options = {}) {
     const {
       format = "{text}",
+      getData = null,
       popupId = "voronoi-popup",
       className = "voronoi-popup-container",
       onClose = null
@@ -28329,12 +28331,14 @@ body {
     const placeBelow = spaceAbove < 150 || spaceBelow > spaceAbove;
 
     // === Template substitution ===
-    const data = {
-      key: clicked.key,
-      ...(clicked.data || {}),
-      ...(clicked.data?.data || {}),
-      ...(clicked.d?.data?.data || {})
-    };
+    const data = getData
+      ? getData(clicked)
+      : {
+          key: clicked.key,
+          ...(clicked.data || {}),
+          ...(clicked.data?.data || {}),
+          ...(clicked.d?.data?.data || {})
+        };
 
     let content = format
       .replace(/\{(\w+)\}/g, (match, field) => {
