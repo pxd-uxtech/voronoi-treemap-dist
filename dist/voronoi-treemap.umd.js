@@ -455,16 +455,35 @@
        * @returns {Object|null} Bounding box info or null if element invalid
        */
       function getForeignObjectBox(element) {
-        const x = parseFloat(element.attr("x") || 0);
-        const y = parseFloat(element.attr("y") || 0);
-        const width = parseFloat(element.attr("width") || 0);
-        const height = parseFloat(element.attr("height") || 0);
-        if (width === 0 || height === 0) return null;
+        const node = element.node();
+        if (!node) return null;
+
+        const foX = parseFloat(element.attr("x") || 0);
+        const foY = parseFloat(element.attr("y") || 0);
+        const foW = parseFloat(element.attr("width") || 0);
+        const foH = parseFloat(element.attr("height") || 0);
+        if (foW === 0 || foH === 0) return null;
+
+        // Use actual rendered content size from inner div (not declared foreignObject size)
+        let width = foW;
+        let height = foH;
+        const innerDiv = node.querySelector("div");
+        if (innerDiv) {
+          const rect = innerDiv.getBoundingClientRect();
+          if (rect.width > 0) width = rect.width;
+          if (rect.height > 0) height = rect.height;
+        }
+
+        // Content is flex-centered within the foreignObject
+        const centerX = foX + foW / 2;
+        const centerY = foY + foH / 2;
+        const contentTop = centerY - height / 2;
+
         return {
-          originalX: x + width / 2,
-          originalY: y,
-          x: x + width / 2,
-          y: y + height / 2,
+          originalX: centerX,
+          originalY: contentTop,
+          x: centerX,
+          y: centerY,
           width,
           height,
           tspanCount: 1
