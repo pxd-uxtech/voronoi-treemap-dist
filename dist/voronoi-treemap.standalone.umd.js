@@ -26044,12 +26044,8 @@
           return { x: labelBox.originalX, y: proposedSecondary };
         }
 
-        // Neither direction fits fully — clamp to the side with more space
-        const clampedY = preferBelow
-          ? Math.min(cellBounds.maxY - labelBox.height, proposedPrimary)
-          : Math.max(cellBounds.minY, proposedPrimary);
-
-        return { x: labelBox.originalX, y: clampedY };
+        // Neither direction fits within cell — leave in original position
+        return { x: labelBox.originalX, y: labelBox.originalY };
       }
 
       /**
