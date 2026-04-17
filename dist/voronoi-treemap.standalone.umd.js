@@ -27448,7 +27448,7 @@ body {
 
     // === Default Color Palette ===
     static get DEFAULT_COLORS() {
-      return "#afc7dd,#ffe9a9,#f69f8f,#b4c8af,#e9e4d6,#bed1d8,#f8dba1,#fcbc8b,#d7e0c4,#c5b5a6,#b5ccc1,#e9bfb4,#e9f0f6,#fffefb,#fce0db,#e1e9df,#f1f5f7,#fef8ed,#feeada,#fbfcf9,#e5ded7,#e5edea,#fbf5f3,#96b6d3,#ffdf85,#f3836e,#a0b99a,#ddd4be,#a7c1cb,#f5cf80,#fba868,#c7d4ac,#b7a490,#a0bdb0,#e1a799,#d7e3ee,#fff7e1,#facbc3,#d3dfd0,#fdfcfa,#e1eaed,#fcefd5,#fddcc2,#f0f3e9,#dbd2c8,#d6e3dd,#f6e4df,#dee8f1,#fffaeb,#fbd4cc,#d9e3d6,#e7eef1,#fcf3df,#fee1cc,#f4f7ef,#dfd7ce,#dce7e2,#f8ebe7,#e5edf4,#fffdf5,#fcdcd6,#dfe7dc,#eef3f5,#fdf6e8,#fee7d6,#f9faf6,#e3dcd4,#e2ebe7,#faf1ef,#d0b7ba,#b8cec4,#d2b6b6,#b6bdd6,#d9b8b7,#ded5b6,#bac2d7,#c8d5be,#e3bfb7,#f9dfb3,#eac2b8,#c1d3da,#ddc7c1,#d9e2c7,#cfdad5,#eecdc1,#ccdddf,#c7d7e6,#ded6cf,#e7d1cb,#ced9e5,#eedbc8,#d7e3e2,#e3ead2,#ecdcd2,#d9e0e5,#efe1d2,#ebdad7,#eed6da,#e1e6de,#dde4e8,#eee1d8,#f5e8d7,#f1e6dd,#f5e8de,#f3e7e1,#f5eee1,#f5f2ec".split(
+      return "#afc7dd,#ffe9a9,#f69f8f,#b4c8af,#e9e4d6,#bed1d8,#f8dba1,#fcbc8b,#d7e0c4,#c5b5a6,#b5ccc1,#e9bfb4,#e9f0f6,#fffefb,#fce0db,#e1e9df,#f1f5f7,#fef8ed,#feeada,#fbfcf9,#e5ded7,#e5edea,#fbf5f3".split(
         ","
       );
     }
@@ -28292,6 +28292,7 @@ body {
    * @param {Object} [clicked.data] - Additional data associated with the cell
    * @param {Object} [options] - Popup configuration options
    * @param {string} [options.format="{text}"] - Template string for popup content (e.g., "{key}: {value}")
+   * @param {Function} [options.getData] - Custom function to extract data from clicked object. Receives clicked, returns data object. If omitted, uses default spread logic.
    * @param {string} [options.popupId="voronoi-popup"] - DOM ID for the popup element
    * @param {string} [options.className="voronoi-popup-container"] - CSS class for the popup
    * @param {Function} [options.onClose] - Callback function when popup is closed
@@ -28300,6 +28301,7 @@ body {
   function showVoronoiPopup(clicked, options = {}) {
     const {
       format = "{text}",
+      getData = null,
       popupId = "voronoi-popup",
       className = "voronoi-popup-container",
       onClose = null
@@ -28344,12 +28346,14 @@ body {
     const placeBelow = spaceAbove < 150 || spaceBelow > spaceAbove;
 
     // === Template substitution ===
-    const data = {
-      key: clicked.key,
-      ...(clicked.data || {}),
-      ...(clicked.data?.data || {}),
-      ...(clicked.d?.data?.data || {})
-    };
+    const data = getData
+      ? getData(clicked)
+      : {
+          key: clicked.key,
+          ...(clicked.data || {}),
+          ...(clicked.data?.data || {}),
+          ...(clicked.d?.data?.data || {})
+        };
 
     let content = format
       .replace(/\{(\w+)\}/g, (match, field) => {
