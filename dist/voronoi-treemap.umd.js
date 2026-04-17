@@ -899,11 +899,13 @@
      */
     colorvariation: function (color, vdomain, value, desc) {
       const domain = d3.extent(vdomain);
-      let vScale = d3.scaleLinear().domain(domain).range([0.3, 1]);
       let c = d3.hsl(color);
       if (c.l > 0.8) c.l = 0.8;
-      c.l += (0.5 - vScale(value)) * 0.1;
-      if (c.l > 0.9) c.l = 0.9;
+      if (domain[0] !== domain[1]) {
+        let vScale = d3.scaleLinear().domain(domain).range([0.3, 1]);
+        c.l += (0.5 - vScale(value)) * 0.1;
+        if (c.l > 0.9) c.l = 0.9;
+      }
       return c.formatHex();
     },
 
